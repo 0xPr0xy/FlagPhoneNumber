@@ -19,17 +19,40 @@ open class FPNTextField: UITextField {
 
 	private var flagWidthConstraint: NSLayoutConstraint?
 	private var flagHeightConstraint: NSLayoutConstraint?
-
+    
+    private let phoneCodeTextFieldLeadingPadding: CGFloat = 5
+    
 	/// The size of the leftView
 	private var leftViewSize: CGSize {
-		let width = flagButtonSize.width + getWidth(text: phoneCodeTextField.text!)
+        let width = flagButtonSize.width + chevronImageViewSize.width + phoneCodeTextFieldLeadingPadding + getWidth(text: phoneCodeTextField.text!)
 		let height = bounds.height
 
 		return CGSize(width: width, height: height)
 	}
 
-	private var phoneCodeTextField: UITextField = UITextField()
-
+    private var phoneCodeTextField: UITextField = UITextField()
+    
+    // Dropdown indicator image
+    private var isExpanded: Bool = false {
+        didSet {
+            let affineTransform: CGAffineTransform = isExpanded ? CGAffineTransform(rotationAngle: .pi) : .identity
+            UIView.animate(withDuration: 0.2) {
+                self.chevronImageView.transform = affineTransform
+            }
+        }
+    }
+    
+    private let chevronImageView: UIImageView = UIImageView()
+    
+    open var chevronImageViewHeightConstraint: NSLayoutConstraint?
+    open var chevronImageViewWidthConstraint: NSLayoutConstraint?
+    open var chevronImageViewSize: CGSize = CGSize(width: 15, height: 15) {
+        didSet {
+            layoutIfNeeded()
+        }
+    }
+    // End Dropdown indicator image
+    
 	private lazy var phoneUtil: NBPhoneNumberUtil = NBPhoneNumberUtil()
 	private var nbPhoneNumber: NBPhoneNumber?
 	private var formatter: NBAsYouTypeFormatter?
@@ -98,9 +121,11 @@ open class FPNTextField: UITextField {
 	}
 
 	private func setup() {
+        
 		leftViewMode = .always
 
 		setupFlagButton()
+        setupChevronImageView()
 		setupPhoneCodeTextField()
 		setupLeftView()
 
@@ -123,6 +148,11 @@ open class FPNTextField: UITextField {
 		flagButton.translatesAutoresizingMaskIntoConstraints = false
 		flagButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 5, bottom: 0, right: 5)
 	}
+    
+    private func setupChevronImageView() {
+        chevronImageView.image = #imageLiteral(resourceName: "chevron_down")
+        chevronImageView.translatesAutoresizingMaskIntoConstraints = false
+    }
 
 	private func setupPhoneCodeTextField() {
 		phoneCodeTextField.font = font
@@ -138,20 +168,30 @@ open class FPNTextField: UITextField {
 		} else {
 			// Fallback on earlier versions
 		}
-
-		leftView?.addSubview(flagButton)
+        
+        leftView?.addSubview(flagButton)
+        leftView?.addSubview(chevronImageView)
 		leftView?.addSubview(phoneCodeTextField)
 
 		flagWidthConstraint = NSLayoutConstraint(item: flagButton, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 0, constant: flagButtonSize.width)
 		flagHeightConstraint = NSLayoutConstraint(item: flagButton, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 0, constant: flagButtonSize.height)
-
-		flagWidthConstraint?.isActive = true
-		flagHeightConstraint?.isActive = true
+        
+        flagWidthConstraint?.isActive = true
+        flagHeightConstraint?.isActive = true
+        
+        chevronImageViewWidthConstraint = NSLayoutConstraint(item: chevronImageView, attribute: .width, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 0, constant: chevronImageViewSize.width)
+        chevronImageViewHeightConstraint = NSLayoutConstraint(item: chevronImageView, attribute: .height, relatedBy: .equal, toItem: nil, attribute: .notAnAttribute, multiplier: 0, constant: chevronImageViewSize.height)
+        
+        chevronImageViewWidthConstraint?.isActive = true
+        chevronImageViewHeightConstraint?.isActive = true
 
 		NSLayoutConstraint(item: flagButton, attribute: .centerY, relatedBy: .equal, toItem: leftView, attribute: .centerY, multiplier: 1, constant: 0).isActive = true
-
 		NSLayoutConstraint(item: flagButton, attribute: .leading, relatedBy: .equal, toItem: leftView, attribute: .leading, multiplier: 1, constant: 0).isActive = true
-		NSLayoutConstraint(item: phoneCodeTextField, attribute: .leading, relatedBy: .equal, toItem: flagButton, attribute: .trailing, multiplier: 1, constant: 0).isActive = true
+        
+        NSLayoutConstraint(item: chevronImageView, attribute: .centerY, relatedBy: .equal, toItem: leftView, attribute: .centerY, multiplier: 1, constant: 0).isActive = true
+        NSLayoutConstraint(item: chevronImageView, attribute: .leading, relatedBy: .equal, toItem: flagButton, attribute: .trailing, multiplier: 1, constant: 0).isActive = true
+        
+		NSLayoutConstraint(item: phoneCodeTextField, attribute: .leading, relatedBy: .equal, toItem: chevronImageView, attribute: .trailing, multiplier: 1, constant: phoneCodeTextFieldLeadingPadding).isActive = true
 		NSLayoutConstraint(item: phoneCodeTextField, attribute: .trailing, relatedBy: .equal, toItem: leftView, attribute: .trailing, multiplier: 1, constant: 0).isActive = true
 		NSLayoutConstraint(item: phoneCodeTextField, attribute: .top, relatedBy: .equal, toItem: leftView, attribute: .top, multiplier: 1, constant: 0).isActive = true
 		NSLayoutConstraint(item: phoneCodeTextField, attribute: .bottom, relatedBy: .equal, toItem: leftView, attribute: .bottom, multiplier: 1, constant: 0).isActive = true
@@ -186,6 +226,7 @@ open class FPNTextField: UITextField {
 	}
 
 	@objc private func displayCountries() {
+        isExpanded = true
 		switch displayMode {
 		case .picker:
 			pickerView.setup(repository: countryRepository)
@@ -213,6 +254,7 @@ open class FPNTextField: UITextField {
 	}
 
 	@objc private func dismissCountries() {
+        isExpanded = false
 		resignFirstResponder()
 		inputView = nil
 		inputAccessoryView = nil
